@@ -1,0 +1,30 @@
+{
+  "name": "augustash/ash_facet_protection",
+  "description": "Protects Drupal sites from bot abuse of faceted search URLs",
+  "type": "drupal-custom-module",
+  "license": "proprietary",
+  "homepage": "https://github.com/augustash/drupal-facet-protection",
+  "authors": [
+    {
+      "name": "August Ash",
+      "homepage": "https://www.augustash.com"
+    }
+  ],
+  "support": {
+    "issues": "https://github.com/augustash/drupal-facet-protection/issues",
+    "source": "https://github.com/augustash/drupal-facet-protection"
+  },
+  "minimum-stability": "dev",
+  "require": {
+    "drupal/core": "^10 || ^11"
+  },
+  "extra": {
+    "drupal-scaffold": {
+      "file-mapping": {
+        "[web-root]/robots.txt": {
+          "append": "assets/robots-additions.txt"
+        }
+      }
+    }
+  }
+}

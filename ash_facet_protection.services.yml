@@ -1,0 +1,5 @@
+services:
+  http_middleware.ash_facet_protection:
+    class: Drupal\ash_facet_protection\Middleware\FacetThrottleMiddleware
+    tags:
+      - { name: http_middleware, priority: 290 }

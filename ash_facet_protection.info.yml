@@ -1,0 +1,4 @@
+name: 'Ash Facet Protection'
+description: 'Throttles abusive faceted search requests and strips tracking params that fragment cache keys.'
+type: module
+core_version_requirement: ^10 || ^11
