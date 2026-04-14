@@ -112,18 +112,40 @@ class FacetThrottleMiddlewareTest extends KernelTestBase {
   }
 
   /**
-   * Tests that tracking params are stripped from the request.
+   * Tests that srsltid triggers a redirect to the clean URL.
    */
-  public function testTrackingParamsStripped(): void {
+  public function testSrsltidRedirects(): void {
     $request = Request::create('/staff-directory', 'GET', [
-      'f' => ['departments:15'],
       'srsltid' => 'abc123',
     ]);
     $response = $this->middleware->handle($request);
-    $this->assertEquals(200, $response->getStatusCode());
-    $this->assertFalse($request->query->has('srsltid'));
-    $this->assertStringNotContainsString('srsltid', $request->server->get('QUERY_STRING'));
-    $this->assertStringNotContainsString('srsltid', $request->server->get('REQUEST_URI'));
+    $this->assertEquals(301, $response->getStatusCode());
+    $this->assertEquals('/staff-directory', $response->headers->get('Location'));
+  }
+
+  /**
+   * Tests that fbclid triggers a redirect to the clean URL.
+   */
+  public function testFbclidRedirects(): void {
+    $request = Request::create('/staff-directory', 'GET', [
+      'fbclid' => 'def456',
+    ]);
+    $response = $this->middleware->handle($request);
+    $this->assertEquals(301, $response->getStatusCode());
+    $this->assertEquals('/staff-directory', $response->headers->get('Location'));
+  }
+
+  /**
+   * Tests that other query params are preserved when tracking params redirect.
+   */
+  public function testTrackingParamRedirectPreservesOtherParams(): void {
+    $request = Request::create('/staff-directory', 'GET', [
+      'page' => '2',
+      'srsltid' => 'abc123',
+    ]);
+    $response = $this->middleware->handle($request);
+    $this->assertEquals(301, $response->getStatusCode());
+    $this->assertEquals('/staff-directory?page=2', $response->headers->get('Location'));
   }
 
   /**

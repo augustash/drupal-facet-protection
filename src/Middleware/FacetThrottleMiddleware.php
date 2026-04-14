@@ -3,6 +3,7 @@
 namespace Drupal\ash_facet_protection\Middleware;
 
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
 
@@ -32,7 +33,7 @@ class FacetThrottleMiddleware implements HttpKernelInterface {
   /**
    * Query parameters to strip (tracking params that fragment cache).
    */
-  const STRIP_PARAMS = ['srsltid'];
+  const STRIP_PARAMS = ['srsltid', 'fbclid'];
 
   /**
    * Cache key for valid facet aliases.
@@ -65,7 +66,7 @@ class FacetThrottleMiddleware implements HttpKernelInterface {
     $facets = $request->query->all('f');
     $hasFacets = !empty($facets);
 
-    // Strip tracking parameters that fragment cache keys.
+    // Redirect to strip tracking parameters that fragment cache keys.
     $stripped = FALSE;
     foreach (self::STRIP_PARAMS as $param) {
       if ($request->query->has($param)) {
@@ -75,10 +76,9 @@ class FacetThrottleMiddleware implements HttpKernelInterface {
     }
     if ($stripped) {
       $qs = http_build_query($request->query->all());
-      $request->server->set('QUERY_STRING', $qs);
       $baseUri = strtok($request->server->get('REQUEST_URI'), '?');
-      $request->server->set('REQUEST_URI', $qs !== '' ? $baseUri . '?' . $qs : $baseUri);
-      $request->overrideGlobals();
+      $cleanUrl = $qs !== '' ? $baseUri . '?' . $qs : $baseUri;
+      return new RedirectResponse($cleanUrl, 301);
     }
 
     if (!$hasFacets) {
