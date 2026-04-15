@@ -31,9 +31,22 @@ class FacetThrottleMiddleware implements HttpKernelInterface {
   const RATE_WINDOW = 60;
 
   /**
-   * Query parameters to strip (tracking params that fragment cache).
+   * Tracking params safe to redirect away (not needed by client-side JS).
    */
-  const STRIP_PARAMS = ['srsltid', 'fbclid'];
+  const REDIRECT_PARAMS = ['srsltid', 'fbclid'];
+
+  /**
+   * Tracking params to strip from cache key only (analytics JS needs them in
+   * the browser URL, but they shouldn't fragment Drupal's page cache).
+   */
+  const STRIP_PARAMS = [
+    'gclid',
+    'msclkid',
+    '_kx',
+    'gbraid',
+    'gad_source',
+    'gad_campaignid',
+  ];
 
   /**
    * Cache key for valid facet aliases.
@@ -66,7 +79,24 @@ class FacetThrottleMiddleware implements HttpKernelInterface {
     $facets = $request->query->all('f');
     $hasFacets = !empty($facets);
 
-    // Redirect to strip tracking parameters that fragment cache keys.
+    // Redirect away tracking params not needed by client-side JS.
+    $redirected = FALSE;
+    foreach (self::REDIRECT_PARAMS as $param) {
+      if ($request->query->has($param)) {
+        $request->query->remove($param);
+        $redirected = TRUE;
+      }
+    }
+    if ($redirected) {
+      $qs = http_build_query($request->query->all());
+      $baseUri = strtok($request->server->get('REQUEST_URI'), '?');
+      $cleanUrl = $qs !== '' ? $baseUri . '?' . $qs : $baseUri;
+      return new RedirectResponse($cleanUrl, 301);
+    }
+
+    // Strip analytics params from the internal request so Drupal's page cache
+    // keys on the clean URL. The browser URL is unchanged, so client-side JS
+    // can still read these params for conversion tracking.
     $stripped = FALSE;
     foreach (self::STRIP_PARAMS as $param) {
       if ($request->query->has($param)) {
@@ -76,9 +106,10 @@ class FacetThrottleMiddleware implements HttpKernelInterface {
     }
     if ($stripped) {
       $qs = http_build_query($request->query->all());
+      $request->server->set('QUERY_STRING', $qs);
       $baseUri = strtok($request->server->get('REQUEST_URI'), '?');
-      $cleanUrl = $qs !== '' ? $baseUri . '?' . $qs : $baseUri;
-      return new RedirectResponse($cleanUrl, 301);
+      $request->server->set('REQUEST_URI', $qs !== '' ? $baseUri . '?' . $qs : $baseUri);
+      $request->overrideGlobals();
     }
 
     if (!$hasFacets) {

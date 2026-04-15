@@ -149,6 +149,60 @@ class FacetThrottleMiddlewareTest extends KernelTestBase {
   }
 
   /**
+   * Tests that gclid is stripped internally, not redirected.
+   */
+  public function testGclidStrippedInternally(): void {
+    $request = Request::create('/staff-directory', 'GET', [
+      'gclid' => 'abc123',
+    ]);
+    $response = $this->middleware->handle($request);
+    $this->assertEquals(200, $response->getStatusCode());
+    $this->assertFalse($request->query->has('gclid'));
+    $this->assertStringNotContainsString('gclid', $request->server->get('REQUEST_URI'));
+  }
+
+  /**
+   * Tests that msclkid is stripped internally, not redirected.
+   */
+  public function testMsclkidStrippedInternally(): void {
+    $request = Request::create('/staff-directory', 'GET', [
+      'msclkid' => 'def456',
+    ]);
+    $response = $this->middleware->handle($request);
+    $this->assertEquals(200, $response->getStatusCode());
+    $this->assertFalse($request->query->has('msclkid'));
+    $this->assertStringNotContainsString('msclkid', $request->server->get('REQUEST_URI'));
+  }
+
+  /**
+   * Tests that analytics strip params preserve other query params.
+   */
+  public function testAnalyticsStripPreservesOtherParams(): void {
+    $request = Request::create('/staff-directory', 'GET', [
+      'color' => 'blue',
+      'gclid' => 'abc123',
+      'gad_source' => '1',
+    ]);
+    $response = $this->middleware->handle($request);
+    $this->assertEquals(200, $response->getStatusCode());
+    $this->assertEquals('blue', $request->query->get('color'));
+    $this->assertFalse($request->query->has('gclid'));
+    $this->assertFalse($request->query->has('gad_source'));
+  }
+
+  /**
+   * Tests that redirect params take priority over strip params.
+   */
+  public function testRedirectParamsTakePriority(): void {
+    $request = Request::create('/staff-directory', 'GET', [
+      'srsltid' => 'abc',
+      'gclid' => 'def',
+    ]);
+    $response = $this->middleware->handle($request);
+    $this->assertEquals(301, $response->getStatusCode());
+  }
+
+  /**
    * Tests that POST requests are not affected.
    */
   public function testPostRequestsPassThrough(): void {
